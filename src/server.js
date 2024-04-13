@@ -6,12 +6,18 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const passport = require("passport");
 const session = require("express-session");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
 const errorHandlerMiddleware = require("./middleware/error-handler");
 const notFound = require("./middleware/not-found");
 const userRoutes = require("./routes/user.routes");
 const authRoutes = require("./routes/auth.routes");
 const imageRoutes = require("./routes/upload.routes");
+const productRoutes = require("./routes/product.routes");
+const addressRoutes = require("./routes/address.routes");
+const cartRoutes = require("./routes/cart.routes");
+const orderRoutes = require("./routes/order.routes");
 
 const connectDB = require("./config/db");
 
@@ -23,11 +29,19 @@ cloudinary.config({
   api_secret: process.env.CLOUD_API_SECRET,
 });
 
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests
+  message: "Too many requests", // message to send
+});
+
 app.set("trust proxy", 1);
 
 app.use(cors());
+app.use(limiter);
 
 app.use(express.json());
+app.use(helmet());
 app.use(cookieParser(process.env.JWT_SECRET));
 app.use(express.static("./public"));
 app.use(passport.initialize());
@@ -53,6 +67,10 @@ app.get("/x", (req, res) => {
 app.use("/api/v1", authRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/uploads", imageRoutes);
+app.use("/api/v1/products", productRoutes);
+app.use("/api/v1/carts", cartRoutes);
+app.use("/api/v1/addresses", addressRoutes);
+app.use("/api/v1/orders", orderRoutes);
 
 app.use(notFound);
 app.use(errorHandlerMiddleware);
@@ -71,3 +89,29 @@ const start = async () => {
 };
 
 start();
+
+const exitHandler = () => {
+  if (server) {
+    server.close(() => {
+      logger.info("Server closed");
+      process.exit(1);
+    });
+  } else {
+    process.exit(1);
+  }
+};
+
+const unexpectedErrorHandler = (error) => {
+  logger.error(error);
+  exitHandler();
+};
+
+process.on("uncaughtException", unexpectedErrorHandler);
+process.on("unhandledRejection", unexpectedErrorHandler);
+
+process.on("SIGTERM", () => {
+  logger.info("SIGTERM received");
+  if (server) {
+    server.close();
+  }
+});

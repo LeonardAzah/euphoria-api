@@ -2,16 +2,36 @@ const express = require("express");
 const authController = require("../controllers/auth.controller");
 const { authenticateUser } = require("../middleware/authentication");
 const passport = require("passport");
+const validateRequest = require("../middleware/requestvalidator");
+const {
+  loginValidation,
+  forgotPasswordValidation,
+  verifyCodeValidation,
+  resetPasswordValidation,
+} = require("../validators/auth.validate");
 
 const router = express.Router();
 
-router.post("/login", authController.login);
+router.post("/login", validateRequest(loginValidation), authController.login);
+
 router.delete("/logout", authenticateUser, authController.logout);
 
-router.post("/forgot-password", authController.forgotPassword);
-router.post("/verify", authController.verifyCode);
+router.post(
+  "/forgot-password",
+  validateRequest(forgotPasswordValidation),
+  authController.forgotPassword
+);
+router.post(
+  "/verify",
+  validateRequest(verifyCodeValidation),
+  authController.verifyCode
+);
 
-router.post("/reset-password", authController.resetPassword);
+router.post(
+  "/reset-password",
+  validateRequest(resetPasswordValidation),
+  authController.resetPassword
+);
 
 router.get(
   "/google",

@@ -3,6 +3,8 @@ const asyncHandler = require("../utils/asyncHandler");
 const CustomError = require("../errors");
 const { StatusCodes } = require("http-status-codes");
 const paginate = require("../utils/paginate");
+const sendAdminEmail = require("../emails/sendAdminEmail");
+const otpGenerator = require("otp-generator");
 
 const registerUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -19,6 +21,39 @@ const registerUser = asyncHandler(async (req, res) => {
   res.status(StatusCodes.CREATED).json({
     success: true,
     msg: "User account created successfully",
+  });
+});
+
+const registerAdmin = asyncHandler(async (req, res) => {
+  const { name, email } = req.body;
+
+  const emailAlreadyExists = await User.isEmailTaken(email);
+
+  if (emailAlreadyExists) {
+    throw new CustomError.BadRequestError("Email already exists");
+  }
+
+  const otp = otpGenerator.generate(8, {
+    upperCaseAlphabets: true,
+    lowerCaseAlphabets: true,
+    specialChars: false,
+  });
+  const user = await User.create({
+    name,
+    password: otp,
+    email,
+    role: "admin",
+  });
+
+  await sendAdminEmail({
+    name: user.name,
+    email: user.email,
+    otp: otp,
+  });
+
+  res.status(StatusCodes.CREATED).json({
+    response: "Successful!",
+    msg: "Please check your email and login",
   });
 });
 
@@ -101,4 +136,5 @@ module.exports = {
   deleteUser,
   updateUser,
   getCurrentUser,
+  registerAdmin,
 };

@@ -1,49 +1,54 @@
 const mongoose = require("mongoose");
+const Address = require("./Address");
+
+const productSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+  },
+  imageUrl: {
+    type: String,
+    required: true,
+  },
+  price: {
+    type: Number,
+    required: true,
+  },
+  color: {
+    type: String,
+    required: true,
+  },
+  size: {
+    type: String,
+    required: true,
+    enum: ["xxs", "xl", "xs", "s", "m", "l", "xxl", "3xl", "4xl"],
+  },
+  creator: {
+    type: mongoose.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+});
 
 const orderSchema = new mongoose.Schema(
   {
-    firstName: {
-      type: String,
-      required: true,
-    },
-
-    lastName: {
-      type: String,
-      required: true,
-    },
-
-    country: {
-      type: String,
-      required: true,
-    },
-    city: {
-      type: String,
-      required: true,
-    },
-    state: {
-      type: String,
-      required: true,
-    },
-    postalCode: {
-      type: String,
-      required: true,
-    },
-    phone: {
-      type: String,
-      required: true,
-    },
-    companyName: {
-      type: String,
-    },
-    shippAddres: shippAddresSchema,
-    streetAddress: {
-      type: String,
-      require: true,
-    },
-    unit: String,
+    products: [
+      {
+        product: { type: productSchema, required: true },
+        quantity: { type: Number, required: true },
+      },
+    ],
     user: {
       type: mongoose.Types.ObjectId,
       ref: "User",
+      required: true,
+    },
+    shippingAddress: {
+      type: Address.schema,
+      required: true,
+    },
+    billingAddress: {
+      type: Address.schema,
       required: true,
     },
   },

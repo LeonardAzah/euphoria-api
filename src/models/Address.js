@@ -41,11 +41,12 @@ const addressSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
-  defaultShipping: {
-    type: Boolean,
-    default: false,
+  addressType: {
+    type: String,
+    enum: ["billing", "shipping"],
+    default: "billing",
   },
-  defaultBilling: {
+  defaultAddress: {
     type: Boolean,
     default: false,
   },

@@ -9,6 +9,10 @@ const UserSchema = new mongoose.Schema(
       minlength: 3,
       maxlength: 50,
     },
+    phone: {
+      type: String,
+      minlength: 8,
+    },
     email: {
       type: String,
       unique: true,
@@ -39,11 +43,18 @@ const UserSchema = new mongoose.Schema(
     passwordOtp: {
       type: String,
     },
+
+    address: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Adress",
+      },
+    ],
     cart: {
       items: [
         {
-          productId: {
-            type: Schema.Types.ObjectId,
+          product: {
+            type: mongoose.Schema.Types.ObjectId,
             ref: "Product",
             required: true,
           },
@@ -66,11 +77,15 @@ const UserSchema = new mongoose.Schema(
   }
 );
 
-UserSchema.pre("save", async function () {
-  if (!this.isModified("password")) return;
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-});
+UserSchema.pre(
+  "save",
+  async function () {
+    if (!this.isModified("password")) return;
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+  },
+  { timestamps: true }
+);
 
 UserSchema.methods.comparePassword = async function (canditatePassword) {
   const isMatch = await bcrypt.compare(canditatePassword, this.password);

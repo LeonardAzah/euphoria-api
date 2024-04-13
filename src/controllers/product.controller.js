@@ -1,5 +1,6 @@
 const Product = require("../models/Product");
 const User = require("../models/User");
+const Order = require("../models/Order");
 const asyncHandler = require("../utils/asyncHandler");
 const CustomError = require("../errors");
 const { StatusCodes } = require("http-status-codes");
@@ -201,16 +202,133 @@ const addProductToCart = asyncHandler(async (req, res) => {
 });
 
 const removeProductFromCart = asyncHandler(async (req, res) => {
-  const { productId } = req.body;
-  const product = await Product.findById(productId);
+  const { id } = req.params;
+  const product = await Product.findById(id);
   if (!product) {
     throw new CustomError("Product Not Found");
   }
-  const user = await User.removeFromCart(productId);
+  const user = await User.removeFromCart(id);
   res.status(StatusCodes.OK).json({
     success: true,
     message: "Product added to cart sucessfully",
     data: user.cart,
+  });
+});
+
+const makeCheckout = asyncHandler(async (req, res) => {
+  const { userId } = req.user;
+
+  const user = await User.findById(userId)
+    .populate("cart.items.product")
+    .populate("address");
+
+  if (user.cart.items.length === 0) {
+    throw new CustomError.BadRequestError("Cart is empty");
+  }
+  //calculate ammount
+  const amount = await user.calculateCartTotal();
+  const grandTotal = amount.cart.grandTotal;
+  const subTotal = amount.cart.subTotal;
+  const shipping = amount.cart.shipping;
+
+  // Retrieve user's default shipping and billing address
+  let shippingAddress;
+  let billingAddress;
+  if (user.address && user.address.length > 0) {
+    shippingAddress = user.address.find(
+      (address) => address.defaultAddress && address.addressType === "shipping"
+    );
+    billingAddress = user.address.find(
+      (address) => address.defaultAddress && address.addressType === "billing"
+    );
+  }
+
+  if (!shippingAddress || !billingAddress) {
+    throw new CustomError.BadRequestError(
+      "Default shipping and billing addresses are required"
+    );
+  }
+
+  // Create order
+  const order = new Order({
+    products: user.cart.items.map((item) => ({
+      name: item.product.name,
+      imageUrl: item.product.imageUrl,
+      price: item.product.price,
+      color: item.product.color,
+      size: item.product.size,
+      creator: item.product.creator,
+      quantity: item.quantity,
+    })),
+    user: userId,
+    paymentMethod: req.body.paymentMethod,
+    shippingAddress,
+    billingAddress,
+  });
+  await order.save();
+
+  //clear card data
+  await user.clearCart();
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    message: "Order created successfully",
+    data: {
+      order,
+      subTotal,
+      shipping,
+      grandTotal,
+    },
+  });
+});
+
+const getAllOrder = asyncHandler(async (req, res) => {
+  const { userId } = req.user;
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  const filters = { user: userId };
+  const excludeFields = "user";
+
+  const populateOptions = [
+    {
+      model: "Product",
+      path: "product",
+      select: "name, color, size",
+    },
+  ];
+  const orders = await paginate({
+    model: Order,
+    page,
+    limit,
+    filters,
+    excludeFields,
+    populateOptions,
+  });
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    message: "Orders fetched sucessfully",
+    data: orders,
+  });
+});
+
+const getOrderById = asyncHandler(async (req, res) => {
+  const { userId } = req.user;
+  const { id } = req.params;
+
+  const order = await Order.findOne({ user: userId, _id: id }).populate({
+    path: "product",
+    select: "name, color, size, price,imageUrl",
+  });
+  if (!order) {
+    throw new CustomError.NotFoundError("Order not found");
+  }
+  res.status(StatusCodes.OK).json({
+    success: true,
+    message: "Order fetched sucessfully",
+    data: order,
   });
 });
 
@@ -226,4 +344,7 @@ module.exports = {
   removeProductFromCart,
   removeProductFromCart,
   getCart,
+  makeCheckout,
+  getAllOrder,
+  getOrderById,
 };

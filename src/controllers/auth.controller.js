@@ -10,6 +10,7 @@ const CustomError = require("../errors");
 const createHash = require("../utils/createHash");
 const bcrypt = require("bcryptjs");
 const sendResetPasswordEmail = require("../emails/sendResetPasswordEmail");
+const verifyOTP = require("../utils/verifyOtp");
 
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -99,18 +100,15 @@ const forgotPassword = asyncHandler(async (req, res) => {
 const verifyCode = asyncHandler(async (req, res) => {
   const { code, email } = req.body;
   const user = await User.findOne({ email });
-  const isOtpValid = await bcrypt.compare(code, user.passwordOtp);
-  if (!isOtpValid) {
+
+  const isValid = await verifyOTP(code, user);
+  if (!isValid) {
     throw new CustomError.UnauthenticatedError("Verification Failed");
   }
 
-  const currentDate = new Date();
-
-  if (isOtpValid && user.passwordTokenExpirationDate > currentDate) {
-    user.passwordOtp = null;
-    user.passwordTokenExpirationDate = null;
-    await user.save();
-  }
+  user.passwordOtp = null;
+  user.passwordTokenExpirationDate = null;
+  await user.save();
 
   res.status(StatusCodes.OK).json({ success: true, msg: "verified" });
 });
