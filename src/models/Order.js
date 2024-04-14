@@ -8,7 +8,6 @@ const productSchema = new mongoose.Schema({
   },
   imageUrl: {
     type: String,
-    required: true,
   },
   price: {
     type: Number,
@@ -45,11 +44,11 @@ const orderSchema = new mongoose.Schema(
     },
     shippingAddress: {
       type: Address.schema,
-      required: true,
+      // required: true,
     },
     billingAddress: {
       type: Address.schema,
-      required: true,
+      // required: true,
     },
   },
   { timestamps: true }

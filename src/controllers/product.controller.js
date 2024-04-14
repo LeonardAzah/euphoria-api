@@ -186,7 +186,7 @@ const getProductByCategory = asyncHandler(async (req, res) => {
 
 const getCart = asyncHandler(async (req, res) => {
   const { userId } = req.user;
-  const user = await User.findById(userId).populate("cart.items.productId");
+  const user = await User.findById(userId).populate("cart.items");
 
   res.status(StatusCodes.OK).json({
     success: true,
@@ -198,28 +198,32 @@ const getCart = asyncHandler(async (req, res) => {
 const addProductToCart = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { userId } = req.user;
+  const { color, size, quantity } = req.body;
   const product = await Product.findById(id);
   const user = await User.findById(userId);
-  console.log(user);
   if (!product) {
     throw new CustomError.NotFoundError("Product Not Found");
   }
 
-  const cart = await user.addToCart(product._id);
+  const data = await user.addToCart(product, color, size, quantity);
   res.status(StatusCodes.OK).json({
     success: true,
     message: "Product added to cart sucessfully",
-    data: cart,
+    data: data.cart,
   });
 });
 
 const removeProductFromCart = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const { userId } = req.user;
+  const { color, size } = req.body;
+
   const product = await Product.findById(id);
+  const user = await User.findById(userId);
   if (!product) {
     throw new CustomError("Product Not Found");
   }
-  const user = await User.removeFromCart(id);
+  const data = await user.removeFromCart(product._id, color, size);
   res.status(StatusCodes.OK).json({
     success: true,
     message: "Product added to cart sucessfully",
@@ -230,18 +234,15 @@ const removeProductFromCart = asyncHandler(async (req, res) => {
 const makeCheckout = asyncHandler(async (req, res) => {
   const { userId } = req.user;
 
-  const user = await User.findById(userId)
-    .populate("cart.items.product")
-    .populate("address");
+  const user = await User.findById(userId);
 
   if (user.cart.items.length === 0) {
     throw new CustomError.BadRequestError("Cart is empty");
   }
   //calculate ammount
-  const amount = await user.calculateCartTotal();
-  const grandTotal = amount.cart.grandTotal;
-  const subTotal = amount.cart.subTotal;
-  const shipping = amount.cart.shipping;
+  const grandTotal = user.cart.totalItemPrice;
+  const subTotal = user.cart.totalShippingPrice;
+  const shipping = user.cart.total;
 
   // Retrieve user's default shipping and billing address
   let shippingAddress;
@@ -254,22 +255,21 @@ const makeCheckout = asyncHandler(async (req, res) => {
       (address) => address.defaultAddress && address.addressType === "billing"
     );
   }
+  console.log(user.address);
 
-  if (!shippingAddress || !billingAddress) {
-    throw new CustomError.BadRequestError(
-      "Default shipping and billing addresses are required"
-    );
-  }
+  // if (!shippingAddress || !billingAddress) {
+  //   throw new CustomError.BadRequestError(
+  //     "Default shipping and billing addresses are required"
+  //   );
+  // }
 
   // Create order
   const order = new Order({
     products: user.cart.items.map((item) => ({
-      name: item.product.name,
-      imageUrl: item.product.imageUrl,
-      price: item.product.price,
-      color: item.product.color,
-      size: item.product.size,
-      creator: item.product.creator,
+      name: item.name,
+      price: item.price,
+      color: item.color,
+      size: item.size,
       quantity: item.quantity,
     })),
     user: userId,

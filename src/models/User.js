@@ -53,20 +53,41 @@ const UserSchema = new mongoose.Schema(
     cart: {
       items: [
         {
-          product: {
+          productId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Product",
             required: true,
           },
+          color: {
+            type: String,
+            required: true,
+          },
+          size: {
+            type: String,
+            required: true,
+          },
+          shipping: {
+            type: Number,
+          },
+          price: {
+            type: Number,
+          },
+          name: {
+            type: String,
+          },
           quantity: { type: Number, required: true },
+          subTotal: {
+            type: Number,
+            default: 0,
+          },
         },
       ],
-      subTotal: {
+      totalItemPrice: {
         type: Number,
         default: 0,
       },
-      shippingPrice: { type: Number, default: 1 },
-      grandTotal: {
+      totalShippingPrice: { type: Number, default: 1 },
+      total: {
         type: Number,
         default: 0,
       },
@@ -98,98 +119,96 @@ UserSchema.statics.isEmailTaken = async function (email) {
 };
 
 UserSchema.methods.calculateCartTotal = async function () {
-  let subTotal = 0;
-  let shippingPrice = 0;
+  let totalItemPrice = 0;
+  let totalShippingPrice = 0;
 
   for (const item of this.cart.items) {
-    subTotal += item.product.price * item.quantity;
-    shippingPrice += item.product.shippingCost * item.quantity;
+    totalItemPrice += item.price * item.quantity;
+    totalShippingPrice += item.shipping * item.quantity;
   }
 
   // Update cart with calculated total and shipping prices
-  this.cart.subTotal = subTotal;
-  this.cart.shippingPrice = shippingPrice;
-  this.cart.grandTotal = subTotal + shippingPrice;
+  this.cart.totalItemPrice = totalItemPrice;
+  this.cart.totalShippingPrice = totalShippingPrice;
+  this.cart.total = totalItemPrice + totalShippingPrice;
 
   // Save and return the updated user
-  return this.save();
-};
-
-UserSchema.methods.addToCart = async function (product, quantity = 1) {
-  const cartProductIndex = this.cart.items.findIndex(
-    (item) => item.product.toString() === product._id.toString()
-  );
-
-  if (cartProductIndex >= 0) {
-    // Product already exists in the cart, update quantity
-    this.cart.items[cartProductIndex].quantity += quantity;
-  } else {
-    // Product doesn't exist in the cart, add it
-    this.cart.items.push({ product: product._id, quantity });
-  }
-
-  // Validate and sanitize cart.subTotal
-  this.cart.subTotal = Number.isNaN(this.cart.subTotal)
-    ? 0
-    : this.cart.subTotal;
-
-  // Validate and sanitize cart.shippingPrice
-  this.cart.shippingPrice = Number.isNaN(this.cart.shippingPrice)
-    ? 0
-    : this.cart.shippingPrice;
-
-  this.cart.product.price = Number.isNaN(this.cart.product.price)
-    ? 1
-    : this.cart.product.price;
-
-  // Recalculate cart totals
-  this.cart.subTotal += product.price * quantity;
-  this.cart.grandTotal = this.cart.subTotal + this.cart.shippingPrice;
-
   await this.save();
 };
 
-// UserSchema.methods.addToCart = async function (product, quantityToAdd = 1) {
-//   const cartProductIndex = this.cart.items.findIndex((cp) => {
-//     return cp.product.toString() === product._id.toString();
-//   });
+UserSchema.methods.addToCart = async function (product, color, size, quantity) {
+  let cartItemIndex = -1;
+  // Find index of the item with matching product, color, and size
+  for (let i = 0; i < this.cart.items.length; i++) {
+    const item = this.cart.items[i];
+    if (
+      item.productId.toString() === product._id.toString() &&
+      item.color === color &&
+      item.size === size
+    ) {
+      cartItemIndex = i;
+      break;
+    }
+  }
 
-//   if (cartProductIndex >= 0) {
-//     // If product already exists in cart, update quantity
-//     this.cart.items[cartProductIndex].quantity += quantityToAdd;
-//   } else {
-//     // If product doesn't exist in cart, add it
-//     this.cart.items.push({
-//       product: product._id,
-//       quantity: quantityToAdd,
-//     });
-//   }
-//   // Recalculate cart totals
-//   this.cart.subTotal += product.price * quantityToAdd;
-//   this.cart.grandTotal = this.cart.subTotal + this.cart.shippingPrice;
-//   // await this.calculateCartTotal();
-
-//   return await this.save();
-// };
-
-// Optimizing removeFromCart method using atomic operations
-UserSchema.methods.removeFromCart = async function (productId) {
-  const updatedUser = await this.model("User").findOneAndUpdate(
-    { _id: this._id },
-    { $pull: { "cart.items": { productId } } },
-    { new: true }
-  );
+  if (quantity < 0) {
+    // If quantity is negative, remove one item from cart
+    if (cartItemIndex !== -1) {
+      this.cart.items[cartItemIndex].quantity--;
+      if (this.cart.items[cartItemIndex].quantity <= 0) {
+        // Remove item from cart if quantity becomes zero or less
+        this.cart.items.splice(cartItemIndex, 1);
+      }
+    }
+  } else {
+    // Product doesn't exist in the cart, add it
+    if (cartItemIndex !== -1) {
+      // If item exists in cart, update quantity
+      this.cart.items[cartItemIndex].quantity += quantity;
+    } else {
+      const subTotal = product.price * quantity;
+      this.cart.items.push({
+        productId: product._id,
+        quantity,
+        shipping: product.shipping,
+        price: product.price,
+        color,
+        size,
+        subTotal,
+        name: product.name,
+      });
+    }
+  }
 
   await this.calculateCartTotal();
 
-  return updatedUser;
+  return await this.save();
+};
+
+// Optimizing removeFromCart method using atomic operations
+UserSchema.methods.removeFromCart = async function (productId, color, size) {
+  const index = this.cart.items.findIndex(
+    (item) =>
+      item.productId.toString() === productId.toString() &&
+      item.color === color &&
+      item.size === size
+  );
+
+  if (index !== -1) {
+    this.cart.items.splice(index, 1);
+  }
+
+  await this.calculateCartTotal();
+
+  return await this.save();
 };
 
 // Optimizing clearCart method
 UserSchema.methods.clearCart = async function () {
   this.cart = { items: [] };
-  this.cart.totalPrice = 0;
-  this.cart.shippingPrice = 0;
+  this.cart.totalItemPrice = 0;
+  this.cart.totalShippingPrice = 0;
+  this.cart.total = 0;
   return await this.save();
 };
 

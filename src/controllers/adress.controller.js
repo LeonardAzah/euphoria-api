@@ -9,10 +9,13 @@ const createAddress = asyncHandler(async (req, res) => {
   const { userId } = req.user;
   req.body.user = userId;
 
+  const user = await User.findById(userId);
+
   const address = new Address(req.body);
   await address.save();
-
-  res.status(StatusCodes.CREATED).json({
+  user.address.push(address);
+  await user.save();
+  await res.status(StatusCodes.CREATED).json({
     success: true,
     msg: "User account created successfully",
     data: address,
