@@ -1,5 +1,6 @@
 require("dotenv").config();
 const express = require("express");
+const path = require("path");
 
 const cloudinary = require("cloudinary").v2;
 const cookieParser = require("cookie-parser");
@@ -44,6 +45,7 @@ app.use(limiter);
 app.use(express.json());
 app.use(helmet());
 app.use(cookieParser(process.env.JWT_SECRET));
+
 app.use(express.static("./public"));
 app.use(passport.initialize());
 app.use(
@@ -63,6 +65,9 @@ app.get("/google", (req, res) => {
 app.get("/x", (req, res) => {
   res.send('<a href="/api/v1/twitter">Authenticate with twitter</a>');
   res.send("euphoria.com");
+});
+app.get("/doc", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "public", "index.html"));
 });
 
 app.use("/api/v1", authRoutes);

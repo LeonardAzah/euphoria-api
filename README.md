@@ -29,3 +29,7 @@ npm start
 ### Usage
 
 After starting the application, you can access it by navigating to http://localhost:5000
+
+### Documentation
+
+http://localhost:5000/doc
