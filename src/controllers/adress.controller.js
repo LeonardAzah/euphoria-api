@@ -5,23 +5,9 @@ const CustomError = require("../errors");
 const { StatusCodes } = require("http-status-codes");
 const checkPermissions = require("../utils/checkPermissions");
 
-const createBillingAddress = asyncHandler(async (req, res) => {
+const createAddress = asyncHandler(async (req, res) => {
   const { userId } = req.user;
   req.body.user = userId;
-
-  const address = new Address(req.body);
-  await address.save();
-
-  res.status(StatusCodes.CREATED).json({
-    success: true,
-    msg: "User account created successfully",
-    data: address,
-  });
-});
-const createshippingAddress = asyncHandler(async (req, res) => {
-  const { userId } = req.user;
-  req.body.user = userId;
-  req.body.addressType = "shipping";
 
   const address = new Address(req.body);
   await address.save();
@@ -45,7 +31,7 @@ const getAllAddresses = asyncHandler(async (req, res) => {
 
 const getAddressById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const address = Address.findById(id);
+  const address = await Address.findById(id);
   if (!address) {
     throw new CustomError.NotFoundError("Adress Not Found");
   }
@@ -81,7 +67,7 @@ const defaultAddress = asyncHandler(async (req, res) => {
   const updates = {
     defaultAddress: true,
   };
-  const address = Address.findByIdAndUpdate(id, updates, { new: true });
+  const address = await Address.findByIdAndUpdate(id, updates, { new: true });
   if (!address) {
     throw new CustomError.NotFoundError("Address Not Found");
   }
@@ -110,8 +96,7 @@ const deleteAddress = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  createBillingAddress,
-  createshippingAddress,
+  createAddress,
   getAllAddresses,
   getAddressById,
   updateAddress,

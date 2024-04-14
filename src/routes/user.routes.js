@@ -32,7 +32,7 @@ router.get(
   userController.getAllUser
 );
 router.patch(
-  "/:id",
+  "/",
   validateRequest(updateUserValidation),
   authenticateUser,
   userController.updateUser
@@ -48,7 +48,6 @@ router.get(
   "/:id",
   validateRequest(validateId),
   authenticateUser,
-  authorizePermissions("admin", "user"),
   userController.getUserById
 );
 

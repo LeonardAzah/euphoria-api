@@ -11,23 +11,17 @@ const validateId = require("../validators/Id.validate");
 const router = express.Router();
 
 router.post(
-  "/billings",
+  "/",
   validateRequest(addressValidation),
   authenticateUser,
-  addressController.createBillingAddress
-);
-router.post(
-  "/shipping",
-  validateRequest(addressValidation),
-  authenticateUser,
-  addressController.createBillingAddress
+  addressController.createAddress
 );
 router.get("/", authenticateUser, addressController.getAllAddresses);
 
 router.put(
   "/:id",
   validateRequest(validateId),
-
+  validateRequest(addressValidation),
   authenticateUser,
   addressController.updateAddress
 );
@@ -41,7 +35,7 @@ router.delete(
 
 router.patch(
   "/:id",
-  validateRequest(updateAddressValidation),
+  validateRequest(validateId),
   authenticateUser,
   addressController.defaultAddress
 );

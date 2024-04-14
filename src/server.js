@@ -10,6 +10,7 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 
 const errorHandlerMiddleware = require("./middleware/error-handler");
+const logger = require("./utils/logger");
 const notFound = require("./middleware/not-found");
 const userRoutes = require("./routes/user.routes");
 const authRoutes = require("./routes/auth.routes");
@@ -90,28 +91,28 @@ const start = async () => {
 
 start();
 
-const exitHandler = () => {
-  if (server) {
-    server.close(() => {
-      logger.info("Server closed");
-      process.exit(1);
-    });
-  } else {
-    process.exit(1);
-  }
-};
+// const exitHandler = () => {
+//   if (server) {
+//     server.close(() => {
+//       logger.info("Server closed");
+//       process.exit(1);
+//     });
+//   } else {
+//     process.exit(1);
+//   }
+// };
 
-const unexpectedErrorHandler = (error) => {
-  logger.error(error);
-  exitHandler();
-};
+// const unexpectedErrorHandler = (error) => {
+//   logger.error(error);
+//   exitHandler();
+// };
 
-process.on("uncaughtException", unexpectedErrorHandler);
-process.on("unhandledRejection", unexpectedErrorHandler);
+// process.on("uncaughtException", unexpectedErrorHandler);
+// process.on("unhandledRejection", unexpectedErrorHandler);
 
-process.on("SIGTERM", () => {
-  logger.info("SIGTERM received");
-  if (server) {
-    server.close();
-  }
-});
+// process.on("SIGTERM", () => {
+//   logger.info("SIGTERM received");
+//   if (server) {
+//     server.close();
+//   }
+// });

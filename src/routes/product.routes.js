@@ -5,10 +5,7 @@ const {
   authorizePermissions,
 } = require("../middleware/authentication");
 const validateRequest = require("../middleware/requestvalidator");
-const {
-  productValidation,
-  productUpdateValidation,
-} = require("../validators/product.validate");
+const { productValidation } = require("../validators/product.validate");
 const validateId = require("../validators/Id.validate");
 
 const router = express.Router();
@@ -29,9 +26,10 @@ router.get(
   productController.getAllMyProducts
 );
 
-router.patch(
+router.put(
   "/:id",
-  validateRequest(productUpdateValidation),
+  validateRequest(validateId),
+  validateRequest(productValidation),
   authenticateUser,
   authorizePermissions("admin"),
   productController.updateProduct

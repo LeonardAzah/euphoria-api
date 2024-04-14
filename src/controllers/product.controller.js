@@ -9,7 +9,7 @@ const checkPermissions = require("../utils/checkPermissions");
 
 const createProduct = asyncHandler(async (req, res) => {
   const { userId } = req.user;
-  req.body.user = userId;
+  req.body.creator = userId;
 
   const product = new Product(req.body);
   await product.save();
@@ -27,7 +27,7 @@ const getAllProducts = asyncHandler(async (req, res) => {
   const populateOptions = [
     {
       model: "User",
-      path: "user",
+      path: "creator",
       select: "name",
     },
   ];
@@ -54,7 +54,7 @@ const getAllMyProducts = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
 
   const { userId } = req.user;
-  const filters = { user: userId };
+  const filters = { creator: userId };
   const select = "name, price";
 
   const products = await paginate({
@@ -63,7 +63,6 @@ const getAllMyProducts = asyncHandler(async (req, res) => {
     limit,
     filters,
     select,
-    populateOptions,
   });
 
   res.status(StatusCodes.OK).json({
@@ -75,7 +74,10 @@ const getAllMyProducts = asyncHandler(async (req, res) => {
 
 const getProductById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const product = await Product.findById(id);
+  const product = await Product.findById(id).populate({
+    path: "creator",
+    select: "name",
+  });
 
   if (!product) {
     throw new CustomError.NotFoundError("Product Not Found");
@@ -96,7 +98,7 @@ const updateProduct = asyncHandler(async (req, res) => {
   if (!product) {
     throw new CustomError.NotFoundError("Project Not Found");
   }
-  checkPermissions(user, product.user);
+  checkPermissions(user, product.creator);
 
   const updatedProduct = await Product.findByIdAndUpdate(id, req.body, {
     new: true,
@@ -117,7 +119,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
   if (!product) {
     throw new CustomError.NotFoundError("Project Not Found");
   }
-  checkPermissions(user, product.user);
+  checkPermissions(user, product.creator);
 
   await product.deleteOne();
   res.status(StatusCodes.OK).json({
@@ -131,7 +133,13 @@ const getProductByCategory = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const { colors, minPrice, maxPrice, sizes, dressStyles } = req.query;
-
+  const populateOptions = [
+    {
+      model: "User",
+      path: "creator",
+      select: "name",
+    },
+  ];
   const filters = { category };
 
   // Apply color filter
@@ -189,11 +197,15 @@ const getCart = asyncHandler(async (req, res) => {
 
 const addProductToCart = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const { userId } = req.user;
   const product = await Product.findById(id);
+  const user = await User.findById(userId);
+  console.log(user);
   if (!product) {
-    throw new CustomError("Product Not Found");
+    throw new CustomError.NotFoundError("Product Not Found");
   }
-  const cart = await User.addToCart(product._id);
+
+  const cart = await user.addToCart(product._id);
   res.status(StatusCodes.OK).json({
     success: true,
     message: "Product added to cart sucessfully",

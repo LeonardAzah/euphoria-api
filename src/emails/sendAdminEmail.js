@@ -9,7 +9,7 @@ const sendAdminEmail = async ({ name, email, otp }) => {
   await sendEmail({
     to: email,
     subject: "Euphoria vendor's account",
-    html: emailTemplate.txt,
+    html: emailTemplate.html,
   });
 };
 

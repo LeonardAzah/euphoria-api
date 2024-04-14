@@ -1,7 +1,9 @@
 const { body } = require("express-validator");
+const validatePassword = require("./validatePassword");
+const CustomError = require("../errors");
 
 const comparePasswords = (value, { req }) => {
-  if (value !== req.body.confirmPassword) {
+  if (value !== req.body.password) {
     throw new CustomError.BadRequestError("Password  do not match");
   }
   return true;
@@ -33,8 +35,7 @@ const resetPasswordValidation = [
   body("password")
     .notEmpty()
     .withMessage("Password is required")
-    .isLength({ min: 8 })
-    .withMessage("Password must be at least 8 characters long"),
+    .custom(validatePassword),
 
   body("confirmPassword")
     .notEmpty()

@@ -134,7 +134,7 @@ const verifyEmail = function (otp, name, message) {
                               <a href="mailto:isongleonard@gmail.com" class="hover-underline"
                                 style="--text-opacity: 1; color: #7367f0;  text-decoration: none;">isongleonard@gmail.com</a>.
                             </p>
-                            <p style="margin: 0 0 16px;">Thanks, <br>The FundNgo Support Team</p>
+                            <p style="margin: 0 0 16px;">Thanks, <br>The Euphoria Support Team</p>
                           </td>
                         </tr>
                         <tr>
@@ -154,12 +154,9 @@ const verifyEmail = function (otp, name, message) {
       </body>
   
       </html>`;
-  const text = `
-          Verify Email, A request to create your iVote account was received.
-          Use this OTP to confirm your account and log in`;
+
   return {
     html: html,
-    text: text,
   };
 };
 

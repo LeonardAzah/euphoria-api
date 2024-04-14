@@ -11,11 +11,9 @@ const descriptionSchema = new mongoose.Schema({
   },
   neck: {
     type: String,
-    required: true,
   },
   pattern: {
     type: String,
-    required: true,
   },
   fit: {
     type: String,
@@ -23,11 +21,9 @@ const descriptionSchema = new mongoose.Schema({
   },
   style: {
     type: String,
-    required: true,
   },
   sleeve: {
     type: String,
-    required: true,
   },
 });
 
@@ -74,6 +70,7 @@ const productSchema = new mongoose.Schema(
     dressStyles: {
       type: [String],
       enum: ["classic", "casual", "business", "sport", "formal"],
+      default: "formal",
     },
     creator: {
       type: mongoose.Types.ObjectId,

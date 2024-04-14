@@ -4,12 +4,15 @@ const {
   authenticateUser,
   authorizePermissions,
 } = require("../middleware/authentication");
+const validateRequest = require("../middleware/requestvalidator");
+const validateId = require("../validators/Id.validate");
 
 const router = express.Router();
 
 router.post(
-  "/",
+  "/:id",
   authenticateUser,
+  validateRequest(validateId),
   authorizePermissions("user"),
   productController.addProductToCart
 );

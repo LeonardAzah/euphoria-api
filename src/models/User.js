@@ -65,7 +65,7 @@ const UserSchema = new mongoose.Schema(
         type: Number,
         default: 0,
       },
-      shippingPrice: { type: Number, default: 0 },
+      shippingPrice: { type: Number, default: 1 },
       grandTotal: {
         type: Number,
         default: 0,
@@ -115,26 +115,62 @@ UserSchema.methods.calculateCartTotal = async function () {
   return this.save();
 };
 
-UserSchema.methods.addToCart = async function (product, quantityToAdd = 1) {
-  const cartProductIndex = this.cart.items.findIndex((cp) => {
-    return cp.productId.toString() === product._id.toString();
-  });
+UserSchema.methods.addToCart = async function (product, quantity = 1) {
+  const cartProductIndex = this.cart.items.findIndex(
+    (item) => item.product.toString() === product._id.toString()
+  );
 
   if (cartProductIndex >= 0) {
-    // If product already exists in cart, update quantity
-    this.cart.items[cartProductIndex].quantity += quantityToAdd;
+    // Product already exists in the cart, update quantity
+    this.cart.items[cartProductIndex].quantity += quantity;
   } else {
-    // If product doesn't exist in cart, add it
-    this.cart.items.push({
-      productId: product._id,
-      quantity: quantityToAdd,
-    });
+    // Product doesn't exist in the cart, add it
+    this.cart.items.push({ product: product._id, quantity });
   }
 
-  await this.calculateCartTotal();
+  // Validate and sanitize cart.subTotal
+  this.cart.subTotal = Number.isNaN(this.cart.subTotal)
+    ? 0
+    : this.cart.subTotal;
 
-  return await this.save();
+  // Validate and sanitize cart.shippingPrice
+  this.cart.shippingPrice = Number.isNaN(this.cart.shippingPrice)
+    ? 0
+    : this.cart.shippingPrice;
+
+  this.cart.product.price = Number.isNaN(this.cart.product.price)
+    ? 1
+    : this.cart.product.price;
+
+  // Recalculate cart totals
+  this.cart.subTotal += product.price * quantity;
+  this.cart.grandTotal = this.cart.subTotal + this.cart.shippingPrice;
+
+  await this.save();
 };
+
+// UserSchema.methods.addToCart = async function (product, quantityToAdd = 1) {
+//   const cartProductIndex = this.cart.items.findIndex((cp) => {
+//     return cp.product.toString() === product._id.toString();
+//   });
+
+//   if (cartProductIndex >= 0) {
+//     // If product already exists in cart, update quantity
+//     this.cart.items[cartProductIndex].quantity += quantityToAdd;
+//   } else {
+//     // If product doesn't exist in cart, add it
+//     this.cart.items.push({
+//       product: product._id,
+//       quantity: quantityToAdd,
+//     });
+//   }
+//   // Recalculate cart totals
+//   this.cart.subTotal += product.price * quantityToAdd;
+//   this.cart.grandTotal = this.cart.subTotal + this.cart.shippingPrice;
+//   // await this.calculateCartTotal();
+
+//   return await this.save();
+// };
 
 // Optimizing removeFromCart method using atomic operations
 UserSchema.methods.removeFromCart = async function (productId) {
