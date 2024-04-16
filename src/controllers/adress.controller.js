@@ -7,7 +7,7 @@ const checkPermissions = require("../utils/checkPermissions");
 
 const createAddress = asyncHandler(async (req, res) => {
   const { userId } = req.user;
-  req.body.user = userId;
+  // req.body.user = userId;
 
   const user = await User.findById(userId);
 
@@ -67,17 +67,32 @@ const updateAddress = asyncHandler(async (req, res) => {
 
 const defaultAddress = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const updates = {
-    defaultAddress: true,
-  };
-  const address = await Address.findByIdAndUpdate(id, updates, { new: true });
+  const address = await Address.findById(id);
   if (!address) {
     throw new CustomError.NotFoundError("Address Not Found");
   }
+
+  const existingDefaultAddress = await Address.findOne({
+    addressType: address.addressType,
+    defaultAddress: true,
+  });
+
+  console.log(existingDefaultAddress);
+
+  //change the present default addresses to false
+  if (existingDefaultAddress) {
+    existingDefaultAddress.defaultAddress = false;
+    await existingDefaultAddress.save();
+  }
+
+  // Set new default address
+  address.defaultAddress = true;
+  const updatedAddress = await address.save();
+
   res.status(StatusCodes.OK).json({
     success: true,
     message: "Default set sucessfully",
-    data: address,
+    data: updateAddress,
   });
 });
 

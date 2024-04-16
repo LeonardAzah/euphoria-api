@@ -22,10 +22,12 @@ const productSchema = new mongoose.Schema({
     required: true,
     enum: ["xxs", "xl", "xs", "s", "m", "l", "xxl", "3xl", "4xl"],
   },
+  quantity: { type: Number, required: true },
+
   creator: {
     type: mongoose.Types.ObjectId,
     ref: "User",
-    required: true,
+    // required: true,
   },
 });
 
@@ -34,7 +36,6 @@ const orderSchema = new mongoose.Schema(
     products: [
       {
         product: { type: productSchema, required: true },
-        quantity: { type: Number, required: true },
       },
     ],
     user: {
@@ -42,13 +43,17 @@ const orderSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    paymentMethod: {
+      type: String,
+      required: true,
+    },
     shippingAddress: {
       type: Address.schema,
-      // required: true,
+      required: true,
     },
     billingAddress: {
       type: Address.schema,
-      // required: true,
+      required: true,
     },
   },
   { timestamps: true }

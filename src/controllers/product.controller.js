@@ -1,11 +1,13 @@
 const Product = require("../models/Product");
 const User = require("../models/User");
 const Order = require("../models/Order");
+const Address = require("../models/Address");
 const asyncHandler = require("../utils/asyncHandler");
 const CustomError = require("../errors");
 const { StatusCodes } = require("http-status-codes");
 const paginate = require("../utils/paginate");
 const checkPermissions = require("../utils/checkPermissions");
+const findDefaultAddress = require("../utils/findDefaultAddress");
 
 const createProduct = asyncHandler(async (req, res) => {
   const { userId } = req.user;
@@ -234,6 +236,9 @@ const removeProductFromCart = asyncHandler(async (req, res) => {
 const makeCheckout = asyncHandler(async (req, res) => {
   const { userId } = req.user;
 
+  let shippingAddress;
+  let billingAddress;
+
   const user = await User.findById(userId);
 
   if (user.cart.items.length === 0) {
@@ -244,33 +249,51 @@ const makeCheckout = asyncHandler(async (req, res) => {
   const subTotal = user.cart.totalShippingPrice;
   const shipping = user.cart.total;
 
-  // Retrieve user's default shipping and billing address
-  let shippingAddress;
-  let billingAddress;
-  if (user.address && user.address.length > 0) {
-    shippingAddress = user.address.find(
-      (address) => address.defaultAddress && address.addressType === "shipping"
-    );
-    billingAddress = user.address.find(
-      (address) => address.defaultAddress && address.addressType === "billing"
-    );
+  if (!req.body.shippingAddress) {
+    if (user.address && user.address.length > 0) {
+      shippingAddress = await findDefaultAddress(user, "shipping");
+    }
+  } else {
+    shippingAddress = req.body.shippingAddress;
   }
-  console.log(user.address);
 
-  // if (!shippingAddress || !billingAddress) {
-  //   throw new CustomError.BadRequestError(
-  //     "Default shipping and billing addresses are required"
-  //   );
-  // }
+  if (!req.body.billingAddress) {
+    if (user.address && user.address.length > 0) {
+      billingAddress = await findDefaultAddress(user, "billing");
+    }
+  } else {
+    billingAddress = req.body.billingAddress;
+  }
+
+  if (req.body.billingAddress && req.body.billingAddress.save) {
+    const newAddress = new Address(req.body.billingAddress);
+    newAddress.addressType = "billing";
+    // newAddress.user = user._id;
+    await newAddress.save();
+    user.address.push(newAddress);
+    await user.save();
+  }
+
+  if (req.body.shippingAddress && req.body.shippingAddress.save) {
+    const newAddress = new Address(req.body.shippingAddress);
+    newAddress.addressType = "shipping";
+    // newAddress.user = user._id;
+    await newAddress.save();
+    await newAddress.save();
+    user.address.push(newAddress);
+    await user.save();
+  }
 
   // Create order
   const order = new Order({
     products: user.cart.items.map((item) => ({
-      name: item.name,
-      price: item.price,
-      color: item.color,
-      size: item.size,
-      quantity: item.quantity,
+      product: {
+        name: item.name,
+        price: item.price,
+        color: item.color,
+        size: item.size,
+        quantity: item.quantity,
+      },
     })),
     user: userId,
     paymentMethod: req.body.paymentMethod,
