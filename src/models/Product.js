@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const descriptionSchema = new mongoose.Schema({
+const DescriptionSchema = new mongoose.Schema({
   context: {
     type: String,
     required: true,
@@ -27,7 +27,7 @@ const descriptionSchema = new mongoose.Schema({
   },
 });
 
-const productSchema = new mongoose.Schema(
+const ProductSchema = new mongoose.Schema(
   {
     name: {
       type: String,
@@ -43,7 +43,7 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
     description: {
-      type: descriptionSchema,
+      type: DescriptionSchema,
       required: true,
     },
     imageUrl: {
@@ -72,13 +72,32 @@ const productSchema = new mongoose.Schema(
       enum: ["classic", "casual", "business", "sport", "formal"],
       default: "formal",
     },
+    averageRating: {
+      type: Number,
+      default: 0,
+    },
+    numOfFeedbacks: {
+      type: Number,
+      default: 0,
+    },
     creator: {
       type: mongoose.Types.ObjectId,
       ref: "User",
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-module.exports = mongoose.model("Product", productSchema);
+ProductSchema.virtual("feedback", {
+  ref: "Feedback",
+  localField: "_id",
+  foreignField: "product",
+  justOne: false,
+});
+
+ProductSchema.pre("remove", async function (next) {
+  await this.model("Feedback").deleteMany({ product: this._id });
+});
+
+module.exports = mongoose.model("Product", ProductSchema);

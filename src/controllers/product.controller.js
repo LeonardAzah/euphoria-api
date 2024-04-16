@@ -326,20 +326,12 @@ const getAllOrder = asyncHandler(async (req, res) => {
   const filters = { user: userId };
   const excludeFields = "user";
 
-  const populateOptions = [
-    {
-      model: "Product",
-      path: "product",
-      select: "name, color, size",
-    },
-  ];
   const orders = await paginate({
     model: Order,
     page,
     limit,
     filters,
     excludeFields,
-    populateOptions,
   });
 
   res.status(StatusCodes.OK).json({
@@ -353,10 +345,7 @@ const getOrderById = asyncHandler(async (req, res) => {
   const { userId } = req.user;
   const { id } = req.params;
 
-  const order = await Order.findOne({ user: userId, _id: id }).populate({
-    path: "product",
-    select: "name, color, size, price,imageUrl",
-  });
+  const order = await Order.findOne({ user: userId, _id: id }).select("-user");
   if (!order) {
     throw new CustomError.NotFoundError("Order not found");
   }

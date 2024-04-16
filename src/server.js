@@ -20,6 +20,7 @@ const productRoutes = require("./routes/product.routes");
 const addressRoutes = require("./routes/address.routes");
 const cartRoutes = require("./routes/cart.routes");
 const orderRoutes = require("./routes/order.routes");
+const feedbackRoutes = require("./routes/feedback.routes");
 
 const connectDB = require("./config/db");
 
@@ -77,6 +78,7 @@ app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/carts", cartRoutes);
 app.use("/api/v1/addresses", addressRoutes);
 app.use("/api/v1/orders", orderRoutes);
+app.use("/api/v1/feedbacks", feedbackRoutes);
 
 app.use(notFound);
 app.use(errorHandlerMiddleware);
