@@ -18,6 +18,7 @@ router.post(
   productController.createProduct
 );
 router.get("/", productController.getAllProducts);
+router.get("/search", productController.searchProducts);
 router.get("/category", productController.getProductByCategory);
 router.get(
   "/all",

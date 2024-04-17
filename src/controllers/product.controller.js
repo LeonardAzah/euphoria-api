@@ -50,6 +50,46 @@ const getAllProducts = asyncHandler(async (req, res) => {
     data: products,
   });
 });
+const searchProducts = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const { query } = req.body;
+  const populateOptions = [
+    {
+      model: "User",
+      path: "creator",
+      select: "name",
+    },
+  ];
+
+  const select = "name, price";
+
+  const regexQuery = new RegExp(query, "i");
+  const filters = {
+    $or: [
+      { name: regexQuery },
+      { description: regexQuery },
+      { category: regexQuery },
+      { sizes: regexQuery },
+      { colors: regexQuery },
+    ],
+  };
+
+  const products = await paginate({
+    model: Product,
+    page,
+    limit,
+    filters,
+    select,
+    populateOptions,
+  });
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    message: "Products fetched sucessfully",
+    data: products,
+  });
+});
 
 const getAllMyProducts = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -371,4 +411,5 @@ module.exports = {
   makeCheckout,
   getAllOrder,
   getOrderById,
+  searchProducts,
 };

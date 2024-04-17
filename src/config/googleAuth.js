@@ -14,6 +14,7 @@ module.exports = (passport) => {
       },
       async function (request, accessToken, refreshToken, profile, done) {
         try {
+          console.log({ accessToken, refreshToken });
           //check if user with email eixt
           let user = await User.findOne({
             email: profile.emails[0].value,
@@ -27,9 +28,6 @@ module.exports = (passport) => {
                 googleId: profile.id,
                 email: profile.emails[0].value,
                 name: profile.displayName,
-                isValidated: true,
-                isVerified: true,
-                verified: new Date(),
               });
               await user.save();
             }
@@ -50,9 +48,12 @@ module.exports = (passport) => {
     done(null, tokenUser);
   });
 
-  passport.deserializeUser(function (id, done) {
-    User.findById(id, function (err, user) {
-      done(err, user);
-    });
+  passport.deserializeUser(async (id, done) => {
+    try {
+      const user = await User.findById(id);
+      done(null, user);
+    } catch (error) {
+      done(error);
+    }
   });
 };
